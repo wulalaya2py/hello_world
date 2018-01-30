@@ -1,0 +1,29 @@
+variables:
+  DOCKER_DRIVER: overlay
+  SPRING_PROFILES_ACTIVE: gitlab-ci
+
+stages:
+  - build
+  - deploy
+
+master-build:
+  only:
+    refs:
+      - master
+  image: registry.qishon.com:33000/qishon/docker-mvn
+  stage: build
+  script:
+    - bash
+    - mvn clean package  -DpushImage -DskipTests -X
+
+k8s-deploy:
+  only:
+    refs:
+      - master
+  stage: deploy
+  image: registry.qishon.com:33000/qishon/cd
+#  when: manual
+  script: 
+    - bash
+    - sed -i "s/THIS_STRING_IS_REPLACED_DURING_BUILD/$(date "+%Y-%m-%d+%H:%M:%S")/g" ./docker/yaml/*deployment.yaml
+    - kubectl apply -f ./docker/yaml/ -n $dev_namespace
